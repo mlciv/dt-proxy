@@ -60,13 +60,13 @@ public class SimpleAuthWebHdfsFileSystem extends WebHdfsFileSystem {
     will automatically change to 
     
     <code>
-        http://webhdfs/v1/?op=GETDELEGATIONTOKEN&user.name=alalei
+        http://webhdfs/v1/?op=GETDELEGATIONTOKEN&user.name=xxxx
     </code>
     
     or https for Hsftp
     
     <code>
-    https://webhdfs/v1/?op=GETDELEGATIONTOKEN&user.name=alalei
+    https://webhdfs/v1/?op=GETDELEGATIONTOKEN&user.name=xxxx
     </code>
     
     2. Using RESTful WebHDFS protocol(hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientNamenodeProtocol.proto)
