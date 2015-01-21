@@ -98,4 +98,12 @@ We using 41 41 41... as our identity.
 15/01/21 16:40:41 DEBUG fs.FileSystem: Got dt for hftp://XXX.XX.XX.XX:12351;t.service=XXX.XX.XX.XX:12351
 15/01/21 16:40:41 DEBUG fs.FileSystem: Created new DT for XX.XX.XX.XX:12351
 
+Also, you can check dt-proxy by using simple curl command as following:
+1. curl http://127.0.0.1:12351/getDelegationToken
+2. curl http://127.0.0.1:12351/renewDelegationToken?asasas
+3. curl http://127.0.0.1:12351/cancelDelegationToken?assas
+4. curl http://127.0.0.1:12351/listPaths/user/
+5. curl http://127.0.0.1:12351/data/opt/
+
+
 see more in dummyp-token-proxy.js
