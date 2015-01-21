@@ -104,23 +104,21 @@ var server = require('http').createServer(function(req, res) {
             res.end(sendBuffer);
             logger.info('A dummy token issued for ' + req.socket.remoteAddress);
         } else if (req.url.startsWith('/cancelDelegationToken')){
-            //TODO
             logger.info('Cancelling a dummy token issued for ' + req.socket.remoteAddress);
             // 1.get token from url
-            var result = require('url').parse(req.url,true);
+            //var result = require('url').parse(req.url,true);
             // 2.rpc call nn cancel token
             // 3.null resp except expetion
             res.end('');
-            logger.info('A dummy token cancelled,'+result);
+            logger.info('A dummy token cancelled,'+req.url);
         } else if (req.url.startsWith('/renewDelegationToken')){
-            //TODO
             //1. get token from url
             logger.info('Renewing a dummy token issued for ' + req.socket.remoteAddress);
-            var result = require('url').parse(req.url,true);
+            //var result = require('url').parse(req.url,true);
             //2. rpc call nn renew
-            //3. println long
+            //3.just println long println long
             res.end('2145830400'); 
-            logger.info('A dummy token renewed,'+result);
+            logger.info('A dummy token renewed,'+req.url);
         } else {
             proxy.web(req,res,{target:proxyDest});
         }

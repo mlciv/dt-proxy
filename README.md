@@ -90,8 +90,8 @@ export HADOOP_ROOT_LOGGER=DEBUG,console
 nohup node dummy-token-proxy.js 12351 http://your-real-namenode:50070 &
 
 3. Test token
-hdfs dfs -ls hftp://10.31.72.101:12351/user/nlp 2&>1 1&> ls_out_nlp
-When the hftpclient(HftpFileSystem) received the valid token, it will print the folllowing debug log.
+hdfs dfs -ls hftp://10.31.72.101:12351/user/nlp &>ls_out_log
+When the hftpclient(HftpFileSystem) received the valid token, it will print the folllowing debug log in ls_out_log
 We using 41 41 41... as our identity.
 
 15/01/21 16:40:41 DEBUG security.SecurityUtil: Acquired token Kind: HFTP delegation, Service: XX.XX.XXX.XXX:12351, Ident: 41 41 41 41 41 41 41 41 41 41
