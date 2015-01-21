@@ -56,35 +56,48 @@ var server = require('http').createServer(function(req, res) {
         if (req.url.startsWith('/getDelegationToken')){
             //writeOut Token
             logger.info('Issuing a dummy token for ' + req.socket.remoteAddress);
-            //1.Int, write tokenMapSize
+            //1.Int, write tokenMapSize writeVLong for -112<= size <=127, write just one byte 
             var buffer = new Buffer(1024);
             var offset =0;
-            buffer.writeInt32BE(1,offset);
-            offset+=4;
+	    // size = 1, only write 1 byte
+            buffer.writeInt8(1,offset);
+            offset+=1;
             //2.for key, value
             //key Text.write:  length, bytes
-            buffer.writeInt32BE(8,offset);
-            offset+=4;
+            buffer.writeInt8(8,offset);
+            offset+=1;
             buffer.write('tokenKey',offset);
             offset+=8;
+
             //value Token.write:
-            buffer.writeInt32BE(10,offset);
-            offset+=4;
-            buffer.write('identifier',offset)
-                offset+=10;
-            buffer.writeInt32BE(8,offset);
-            offset+=4;
+            //write length of identity
+            buffer.writeInt8(10,offset);
+            offset+=1;
+	    //write identity bytes 41 41 41....4141 
+            buffer.write('AAAAAAAAAA',offset)
+            offset+=10;
+	    //write length of password
+            buffer.writeInt8(8,offset);
+            offset+=1;
+   	    //write password bytes
             buffer.write('password',offset);
             offset+=8;
-            buffer.write('HFTPFS',offset);
-            offset+=6;
-            buffer.write('service',offset);
-            //writeOut secretKeys
-            //1. Int
-            //2. for key,value
-            offset+=7;
-            buffer.writeInt32BE(0,offset);
+	    //write KIND text
+	    buffer.writeInt8(4,offset);
+	    offset+=1;
+            buffer.write('HFTP',offset);
             offset+=4;
+            //write Service text
+            buffer.writeInt8(7,offset);
+	    offset+=1;
+            buffer.write('service',offset);
+	    offset+=7;
+		
+            //writeOut secretKeys
+            //1. Int keysize =0;
+            //2. for key,value, no key value
+            buffer.writeInt8(0,offset);
+            offset+=1;
             res.writeHead(200, {'Content-Type': 'application/octet-stream','Content-Length':offset});
             var sendBuffer = buffer.slice(0,offset);
             logger.debug('sendBufferLength=%d,offset = %d',sendBuffer.length,offset); 

@@ -82,5 +82,20 @@ public class SimpleAuthWebHdfsFileSystem extends WebHdfsFileSystem {
     
     3. Forward others request (ListPath,/data/) to real namenode. 
 
+### Test
+1. Enable debug log
+export HADOOP_ROOT_LOGGER=DEBUG,console
+
+2. Setup dt-proxy to namenode  
+nohup node dummy-token-proxy.js 12351 http://your-real-namenode:50070 &
+
+3. Test token
+hdfs dfs -ls hftp://10.31.72.101:12351/user/nlp 2&>1 1&> ls_out_nlp
+When the hftpclient(HftpFileSystem) received the valid token, it will print the folllowing debug log.
+We using 41 41 41... as our identity.
+
+15/01/21 16:40:41 DEBUG security.SecurityUtil: Acquired token Kind: HFTP delegation, Service: XX.XX.XXX.XXX:12351, Ident: 41 41 41 41 41 41 41 41 41 41
+15/01/21 16:40:41 DEBUG fs.FileSystem: Got dt for hftp://XXX.XX.XX.XX:12351;t.service=XXX.XX.XX.XX:12351
+15/01/21 16:40:41 DEBUG fs.FileSystem: Created new DT for XX.XX.XX.XX:12351
 
 see more in dummyp-token-proxy.js
