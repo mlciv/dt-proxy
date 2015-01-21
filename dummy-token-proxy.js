@@ -62,8 +62,12 @@ var server = require('http').createServer(function(req, res) {
             buffer.writeInt32BE(1,offset);
             offset+=4;
             //2.for key, value
+            //key Text.write:  length, bytes
+            buffer.writeInt32BE(8,offset);
+            offset+=4;
             buffer.write('tokenKey',offset);
             offset+=8;
+            //value Token.write:
             buffer.writeInt32BE(10,offset);
             offset+=4;
             buffer.write('identifier',offset)
@@ -86,20 +90,20 @@ var server = require('http').createServer(function(req, res) {
             logger.debug('sendBufferLength=%d,offset = %d',sendBuffer.length,offset); 
             res.end(sendBuffer);
             logger.info('A dummy token issued for ' + req.socket.remoteAddress);
-        } else if (req.url.startsWith('cancelDelegationToken')){
+        } else if (req.url.startsWith('/cancelDelegationToken')){
             //TODO
             logger.info('Cancelling a dummy token issued for ' + req.socket.remoteAddress);
             // 1.get token from url
-            var result = require('url').parse(request.url,true);
+            var result = require('url').parse(req.url,true);
             // 2.rpc call nn cancel token
             // 3.null resp except expetion
             res.end('');
             logger.info('A dummy token cancelled,'+result);
-        } else if (req.url.startsWith('renewDelegationToken')){
+        } else if (req.url.startsWith('/renewDelegationToken')){
             //TODO
             //1. get token from url
             logger.info('Renewing a dummy token issued for ' + req.socket.remoteAddress);
-            var result = require('url').parse(request.url,true);
+            var result = require('url').parse(req.url,true);
             //2. rpc call nn renew
             //3. println long
             res.end('2145830400'); 
