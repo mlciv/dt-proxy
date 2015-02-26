@@ -56,18 +56,18 @@ if (cluster.isMaster) {
     });
 }else{
     var server = require('http').createServer(function(req, res) {
-        logger.debug('Serving the URL ' + req.url);
+        logger.debug('[worker '+cluster.worker.id+' ] Serving the URL ' + req.url);
         //for webhdfs
         if(req.url.indexOf('webhdfs')>-1){ 
             if (req.url.startsWith('/webhdfs/v1/?op=GETDELEGATIONTOKEN')) {
-                logger.info('Issuing a dummy token for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] Issuing a dummy token for ' + req.socket.remoteAddress);
                 res.writeHead(200, {'Content-Type': 'application/json'});
                 res.end('{"Token":{"urlString":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}');
             } else if (req.url.startsWith('/webhdfs/v1/?op=CANCELDELEGATIONTOKEN')) {
-                logger.info('Cancel dummy token for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] Cancel dummy token for ' + req.socket.remoteAddress);
                 res.end('');
             } else if (req.url.startsWith('/webhdfs/v1/?op=RENEWDELEGATIONTOKEN')) {
-                logger.info('Renew token for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] Renew token for ' + req.socket.remoteAddress);
                 res.writeHead(200, {'Content-Type': 'application/json'});
                 // 12-31-2037
                 res.end('{"long":2145830400}');
@@ -78,7 +78,7 @@ if (cluster.isMaster) {
         else{
             if (req.url.startsWith('/getDelegationToken')){
                 //writeOut Token
-                logger.info('Issuing a dummy token for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] Issuing a dummy token for ' + req.socket.remoteAddress);
                 //1.Int, write tokenMapSize writeVLong for -112<= size <=127, write just one byte 
                 var buffer = new Buffer(1024);
                 var offset =0;
@@ -123,25 +123,25 @@ if (cluster.isMaster) {
                 offset+=1;
                 res.writeHead(200, {'Content-Type': 'application/octet-stream','Content-Length':offset});
                 var sendBuffer = buffer.slice(0,offset);
-                logger.debug('sendBufferLength=%d,offset = %d',sendBuffer.length,offset); 
+                logger.debug('[worker '+cluster.worker.id+' ] sendBufferLength=%d,offset = %d',sendBuffer.length,offset); 
                 res.end(sendBuffer);
-                logger.info('A dummy token issued for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] A dummy token issued for ' + req.socket.remoteAddress);
             } else if (req.url.startsWith('/cancelDelegationToken')){
-                logger.info('Cancelling a dummy token issued for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] Cancelling a dummy token issued for ' + req.socket.remoteAddress);
                 // 1.get token from url
                 //var result = require('url').parse(req.url,true);
                 // 2.rpc call nn cancel token
                 // 3.null resp except expetion
                 res.end('');
-                logger.info('A dummy token cancelled,'+req.url);
+                logger.info('[worker '+cluster.worker.id+' ] A dummy token cancelled,'+req.url);
             } else if (req.url.startsWith('/renewDelegationToken')){
                 //1. get token from url
-                logger.info('Renewing a dummy token issued for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ] Renewing a dummy token issued for ' + req.socket.remoteAddress);
                 //var result = require('url').parse(req.url,true);
                 //2. rpc call nn renew
                 //3.just println long println long
                 res.end('2145830400'); 
-                logger.info('A dummy token renewed,'+req.url);
+                logger.info('[worker '+cluster.worker.id+' ] A dummy token renewed,'+req.url);
             } else {
                 proxy.web(req,res,{target:proxyDest});
             }
