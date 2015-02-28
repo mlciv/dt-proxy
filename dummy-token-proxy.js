@@ -1,6 +1,6 @@
 "use strict";
 var http = require('http'),
-    httpProxy = require('http-proxy-caronte');
+    httpProxy = require('http-proxy');
 
 var proxy = httpProxy.createProxyServer({});
 var winston = require('winston');
@@ -22,6 +22,11 @@ String.prototype.startsWith = function(s) {
    return this.substring(0, s.length) === s;
 }
 
+proxy.on('error', function(err,req,res) { 
+  // log error, upstream ngix proxy will handle timeout and retry  
+  logger.error("proxy emit request["+req.url+"] failed:"+ err);
+});
+
 if (process.argv.length != 4) {
   logger.info('Work-around proxy to issue a dummy delegation token for WebHDFS. Hortonworks, 2014.');
   logger.info('Usage: ' + process.argv[0] + ' ' + process.argv[1] + ' <port> <namenode http address>');
@@ -34,6 +39,7 @@ var port = process.argv[2], proxyDest = process.argv[3];
 
 var server = require('http').createServer(function(req, res) {
         logger.debug('Serving the URL ' + req.url);
+	logger.debug('RAW_Headers'+require('util').inspect(req.headers, {depth:null}));
         //for webhdfs
    if(req.url.indexOf('webhdfs')>-1){ 
         if (req.url.startsWith('/webhdfs/v1/?op=GETDELEGATIONTOKEN')) {
