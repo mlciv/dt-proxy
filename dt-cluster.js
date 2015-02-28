@@ -31,6 +31,10 @@ if (process.argv.length != 4) {
   process.exit(-1);
 }
 
+proxy.on('error', function(err,req,res) { 
+  // log error, upstream ngix proxy will handle timeout and retry  
+  logger.error("proxy emit request["+req.url+"] failed:"+ err);
+});
 
 var port = process.argv[2], proxyDest = process.argv[3]; 
 
@@ -56,18 +60,18 @@ if (cluster.isMaster) {
     });
 }else{
     var server = require('http').createServer(function(req, res) {
-        logger.debug('[worker '+cluster.worker.id+' ] Serving the URL ' + req.url);
+        logger.debug('Serving the URL ' + req.url);
         //for webhdfs
         if(req.url.indexOf('webhdfs')>-1){ 
             if (req.url.startsWith('/webhdfs/v1/?op=GETDELEGATIONTOKEN')) {
-                logger.info('[worker '+cluster.worker.id+' ] Issuing a dummy token for ' + req.socket.remoteAddress);
+                logger.info('Issuing a dummy token for ' + req.socket.remoteAddress);
                 res.writeHead(200, {'Content-Type': 'application/json'});
                 res.end('{"Token":{"urlString":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}');
             } else if (req.url.startsWith('/webhdfs/v1/?op=CANCELDELEGATIONTOKEN')) {
-                logger.info('[worker '+cluster.worker.id+' ] Cancel dummy token for ' + req.socket.remoteAddress);
+                logger.info('Cancel dummy token for ' + req.socket.remoteAddress);
                 res.end('');
             } else if (req.url.startsWith('/webhdfs/v1/?op=RENEWDELEGATIONTOKEN')) {
-                logger.info('[worker '+cluster.worker.id+' ] Renew token for ' + req.socket.remoteAddress);
+                logger.info('Renew token for ' + req.socket.remoteAddress);
                 res.writeHead(200, {'Content-Type': 'application/json'});
                 // 12-31-2037
                 res.end('{"long":2145830400}');
@@ -78,7 +82,7 @@ if (cluster.isMaster) {
         else{
             if (req.url.startsWith('/getDelegationToken')){
                 //writeOut Token
-                logger.info('[worker '+cluster.worker.id+' ] Issuing a dummy token for ' + req.socket.remoteAddress);
+                logger.info('[worker '+cluster.worker.id+' ]Issuing a dummy token for ' + req.socket.remoteAddress);
                 //1.Int, write tokenMapSize writeVLong for -112<= size <=127, write just one byte 
                 var buffer = new Buffer(1024);
                 var offset =0;
@@ -123,7 +127,7 @@ if (cluster.isMaster) {
                 offset+=1;
                 res.writeHead(200, {'Content-Type': 'application/octet-stream','Content-Length':offset});
                 var sendBuffer = buffer.slice(0,offset);
-                logger.debug('[worker '+cluster.worker.id+' ] sendBufferLength=%d,offset = %d',sendBuffer.length,offset); 
+                logger.debug('[worker '+cluster.worker.id+' ]sendBufferLength=%d,offset = %d',sendBuffer.length,offset); 
                 res.end(sendBuffer);
                 logger.info('[worker '+cluster.worker.id+' ] A dummy token issued for ' + req.socket.remoteAddress);
             } else if (req.url.startsWith('/cancelDelegationToken')){
