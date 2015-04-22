@@ -6,12 +6,12 @@ var proxy = httpProxy.createProxyServer({});
 var winston = require('winston');
 var logger = new (winston.Logger)({
     transports: [
-        new (winston.transports.Console)({ level: 'debug', timestamp: function() {
+        new (winston.transports.Console)({ level: 'info', timestamp: function() {
                 var df = require('console-stamp/node_modules/dateformat');
                     return df(new Date(), 'HH:MM:ss.l');
                     }
                     }),
-        new (winston.transports.File)({ level:'debug',filename: 'token_proxy.log', timestamp: function() {
+        new (winston.transports.File)({ level:'info',filename: 'token_proxy.log', timestamp: function() {
                 var df = require('console-stamp/node_modules/dateformat');
                     return df(new Date(), 'HH:MM:ss.l');
                     }
