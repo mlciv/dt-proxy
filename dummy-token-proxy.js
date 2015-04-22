@@ -1,17 +1,17 @@
 "use strict";
 var http = require('http'),
     httpProxy = require('http-proxy');
-
+var lineReader = require('line-reader');
 var proxy = httpProxy.createProxyServer({});
 var winston = require('winston');
 var logger = new (winston.Logger)({
     transports: [
-        new (winston.transports.Console)({ level: 'info', timestamp: function() {
+        new (winston.transports.Console)({ level: 'debug', timestamp: function() {
                 var df = require('console-stamp/node_modules/dateformat');
                     return df(new Date(), 'HH:MM:ss.l');
                     }
                     }),
-        new (winston.transports.File)({ level:'info',filename: 'token_proxy.log', timestamp: function() {
+        new (winston.transports.File)({ level:'debug',filename: 'token_proxy.log', timestamp: function() {
                 var df = require('console-stamp/node_modules/dateformat');
                     return df(new Date(), 'HH:MM:ss.l');
                     }
@@ -22,11 +22,6 @@ String.prototype.startsWith = function(s) {
    return this.substring(0, s.length) === s;
 }
 
-proxy.on('error', function(err,req,res) { 
-  // log error, upstream ngix proxy will handle timeout and retry  
-  logger.error("proxy emit request["+req.url+"] failed:"+ err);
-});
-
 if (process.argv.length != 4) {
   logger.info('Work-around proxy to issue a dummy delegation token for WebHDFS. Hortonworks, 2014.');
   logger.info('Usage: ' + process.argv[0] + ' ' + process.argv[1] + ' <port> <namenode http address>');
@@ -36,6 +31,50 @@ if (process.argv.length != 4) {
 
 
 var port = process.argv[2], proxyDest = process.argv[3]; 
+var host_ip_dict = {};
+lineReader.eachLine('SourceDataNodeHosts', function(line, last) {
+  var reg = /[\s|\t]+/;
+  var splits = line.split(reg);
+  if (splits.length == 2){
+      logger.info("splitsLenth = "+splits.length+" loaded:" + splits);
+      host_ip_dict[splits[1]]=splits[0];
+  }else{
+      logger.info("line is invalid: "+ line);
+  }
+});
+
+// Listen for error event
+proxy.on('error', function(err,req,res) { 
+  // retry 
+  logger.error("proxy emit request["+req.url+"] failed:"+ err);
+});
+
+// Listen for proxyRes event, replace hostname to IP
+proxy.on('proxyRes', function (proxyRes, req, res) {
+  logger.debug('RAW Response from the target', JSON.stringify(proxyRes.headers, true, 2));
+  var location = proxyRes.headers["location"];
+  if(location!=null)
+  {
+  	var reg = /https?:\/\/.*?[:|\/]/;
+  	var hostname_str = location.match(reg);
+  	if(hostname_str==null) logger.error("find no pattern of hostname");
+  	var hostname = "";
+  	if(hostname_str[0].startsWith('https://')){
+  		hostname = 	hostname_str[0].substring(8,hostname_str[0].length-1);
+  	}
+  	else if(hostname_str[0].startsWith('http://')){
+  		hostname = 	hostname_str[0].substring(7,hostname_str[0].length-1);
+  	}
+  	var ipreg=/\d+\.\d+\.\d+\.\d+/;
+        //if hostname is not a ip, replace it with host_ip_dict
+  	if(!ipreg.test(hostname)){
+  		var reg1 = hostname;
+  		var new_location = proxyRes.headers["location"].replace(hostname,host_ip_dict[hostname]); // replace the first one by default
+  		proxyRes.headers["location"] = new_location;
+  		logger.debug('replace hostname['+hostname+'] with ip['+host_ip_dict[hostname]+']: ', JSON.stringify(proxyRes.headers, true, 2));
+  	}
+  }
+});
 
 var server = require('http').createServer(function(req, res) {
         logger.debug('Serving the URL ' + req.url);

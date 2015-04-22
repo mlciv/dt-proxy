@@ -82,6 +82,33 @@ public class SimpleAuthWebHdfsFileSystem extends WebHdfsFileSystem {
     
     3. Forward others request (ListPath,/data/) to real namenode. 
 
+### Replace unresolved hostname to IP
+****************
+    When running /data/ handle to fetching data from the real hdfs namenode that the proxy delegate, the namenode will repsonse the /data/ handle with a "LOCATION" in the http header as the following:
+    <pre>
+    <code>
+  "location": "http://tslave075031.hadoop.sohuno.com:1006/streamFile?filename=/user/hadoopmc/test/hadoop-core-0.20.2-cdh3u1.jar&ugi=alalei&delegation=CkFBQUFBQUFBQUEIcGFzc3dvcmQVSERGU19ERUxFR0FUSU9OX1RPS0VOEjEwLjMxLjcyLjEwMToxMjM1Nw",
+    </code>
+    </pre>
+  Proxy will forword this header to the client.
+  However, the client may cannot resove the "tslave075031.hadoop.sohuno.com" hostname in result that the client command failed. 
+  Previously, we simply modified the /etc/hosts on every client node to work around this issue. However, it will be a big disaster to append thousands of hostname to every node.
+  So we incepter the proxyRes event of http-proxy, load the host_ip_dict(the same with /etc/host), and replace the unresolved hostname with corresponding ip by lookup the "host_ip_dict" dictionary. Finally, every node wil receive the LOCATION header withe IP not the unresolved hostname.
+  <pre>
+  <code>
+16:39:11.022 - debug: RAW Response from the target {
+  "location": "http://tslave075031.hadoop.sohuno.com:1006/streamFile?filename=/user/hadoopmc/test/hadoop-core-0.20.2-cdh3u1.jar&ugi=alalei&delegation=CkFBQUFBQUFBQUEIcGFzc3dvcmQVSERGU19ERUxFR0FUSU9OX1RPS0VOEjEwLjMxLjcyLjEwMToxMjM1Nw",
+  "connection": "close",
+  "server": "Jetty(6.1.26)"
+}
+16:39:11.023 - info: replace hostname[tslave075031.hadoop.sohuno.com] with ip[10.31.75.31]:  {
+  "location": "http://10.31.75.31:1006/streamFile?filename=/user/hadoopmc/test/hadoop-core-0.20.2-cdh3u1.jar&ugi=alalei&delegation=CkFBQUFBQUFBQUEIcGFzc3dvcmQVSERGU19ERUxFR0FUSU9OX1RPS0VOEjEwLjMxLjcyLjEwMToxMjM1Nw",
+  "connection": "close",
+  "server": "Jetty(6.1.26)"
+}
+  </code>
+  </pre>
+ 
 ### Test
 1. Enable debug log
 export HADOOP_ROOT_LOGGER=DEBUG,console
@@ -98,12 +125,16 @@ We using 41 41 41... as our identity.
 15/01/21 16:40:41 DEBUG fs.FileSystem: Got dt for hftp://XXX.XX.XX.XX:12351;t.service=XXX.XX.XX.XX:12351
 15/01/21 16:40:41 DEBUG fs.FileSystem: Created new DT for XX.XX.XX.XX:12351
 
+
+
 Also, you can check dt-proxy by using simple curl command as following:
 1. curl http://127.0.0.1:12351/getDelegationToken
 2. curl http://127.0.0.1:12351/renewDelegationToken?asasas
 3. curl http://127.0.0.1:12351/cancelDelegationToken?assas
 4. curl http://127.0.0.1:12351/listPaths/user/
-5. curl http://127.0.0.1:12351/data/opt/
-
+5. curl -vv http://127.0.0.1:12351/data/{your-real-file-in-real-hdfs}
+more comprehessive test: 
+1. hadoop dfs -get  hftp://10.31.72.101:12357/{your-real-file-in-real-hdfs} 
+2. hadoop jar hadoop-distcp-3.0.0-SNAPSHOT.jar -Dmapred.job.queue.name=rdipin -skipcrccheck -strategy dynamic -m 2 -update  hftp://10.31.72.101:12357/your-source-file hdfs://your-dest-file
 
 see more in dummyp-token-proxy.js
