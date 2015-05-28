@@ -4,18 +4,20 @@ var http = require('http'),
 var lineReader = require('line-reader');
 var proxy = httpProxy.createProxyServer({});
 var winston = require('winston');
+var urlTools = require('url')
+var qsTools = require('querystring')
 var logger = new (winston.Logger)({
     transports: [
-        new (winston.transports.Console)({ level: 'debug', timestamp: function() {
+        new (winston.transports.Console)({ level: 'info', timestamp: function() {
                 var df = require('console-stamp/node_modules/dateformat');
                     return df(new Date(), 'HH:MM:ss.l');
                     }
-                    }),
-        new (winston.transports.File)({ level:'debug',filename: 'token_proxy.log', timestamp: function() {
-                var df = require('console-stamp/node_modules/dateformat');
-                    return df(new Date(), 'HH:MM:ss.l');
-                    }
-                    }),
+                    })
+               //, new (winston.transports.File)({ level:'info',filename: 'token_proxy.log', timestamp: function() {
+               // var df = require('console-stamp/node_modules/dateformat');
+               //     return df(new Date(), 'HH:MM:ss.l');
+               //     }
+               //     }),
         ]
 });
 String.prototype.startsWith = function(s) {
@@ -67,18 +69,27 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
   	}
   	var ipreg=/\d+\.\d+\.\d+\.\d+/;
         //if hostname is not a ip, replace it with host_ip_dict
+        var new_location = proxyRes.headers["location"];
   	if(!ipreg.test(hostname)){
   		var reg1 = hostname;
-  		var new_location = proxyRes.headers["location"].replace(hostname,host_ip_dict[hostname]); // replace the first one by default
-  		proxyRes.headers["location"] = new_location;
-  		logger.debug('replace hostname['+hostname+'] with ip['+host_ip_dict[hostname]+']: ', JSON.stringify(proxyRes.headers, true, 2));
+  		new_location = proxyRes.headers["location"].replace(hostname,host_ip_dict[hostname]); // replace the first one by default
   	}
+	var filereg = /filename=.*?[&#]/;
+        var filename_str = new_location.match(filereg);
+        if(filename_str!=null){
+		var oriFileName = filename_str[0].substring('filename='.length,filename_str[0].length-1);
+	        var encodedFileName = require('querystring').escape(oriFileName)
+		new_location = new_location.replace(oriFileName,encodedFileName)
+	}
+  	proxyRes.headers["location"] = new_location;
+  	logger.debug('replace hostname['+hostname+'] with ip['+host_ip_dict[hostname]+']: ', JSON.stringify(proxyRes.headers, true, 2));
+	
   }
 });
 
 var server = require('http').createServer(function(req, res) {
         logger.debug('Serving the URL ' + req.url);
-	logger.debug('RAW_Headers'+require('util').inspect(req.headers, {depth:null}));
+	//logger.debug('RAW_Headers'+require('util').inspect(req.headers, {depth:null}));
         //for webhdfs
    if(req.url.indexOf('webhdfs')>-1){ 
         if (req.url.startsWith('/webhdfs/v1/?op=GETDELEGATIONTOKEN')) {
@@ -116,27 +127,30 @@ var server = require('http').createServer(function(req, res) {
 
             //value Token.write:
             //write length of identity
-            buffer.writeInt8(10,offset);
+	    var id_Buffer = new Buffer([0x00,0x08,0x68,0x61,0x64,0x6f,0x6f,0x70,0x6d,0x63,0x08,0x68,0x61,0x64,0x6f,0x6f,0x70,0x6d,0x63,0x08,0x68,0x61,0x64,0x6f,0x6f,0x70,0x6d,0x63,0x00,0x88,0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00])
+	    var len = id_Buffer.length
+            buffer.writeInt8(len,offset);
             offset+=1;
-	    //write identity bytes 41 41 41....4141 
-            buffer.write('AAAAAAAAAA',offset)
-            offset+=10;
+	    //write identity bytes
+	    id_Buffer.copy(buffer,offset); 
+            offset+=len;
 	    //write length of password
+	    var pwd_Buffer = new Buffer([0x00,0x00,0x01,0x4d,0x56,0xbb,0xf1,0xd7]);
             buffer.writeInt8(8,offset);
             offset+=1;
    	    //write password bytes
-            buffer.write('password',offset);
+   	    pwd_Buffer.copy(buffer,offset);
             offset+=8;
 	    //write KIND text
-	    buffer.writeInt8(4,offset);
+	    buffer.writeInt8(21,offset);
 	    offset+=1;
-            buffer.write('HFTP',offset);
-            offset+=4;
+            buffer.write('HDFS_DELEGATION_TOKEN',offset);
+            offset+=21;
             //write Service text
-            buffer.writeInt8(7,offset);
+            buffer.writeInt8(12,offset);
 	    offset+=1;
-            buffer.write('service',offset);
-	    offset+=7;
+            buffer.write('DummyService',offset);
+	    offset+=12;
 		
             //writeOut secretKeys
             //1. Int keysize =0;
@@ -162,8 +176,11 @@ var server = require('http').createServer(function(req, res) {
             //var result = require('url').parse(req.url,true);
             //2. rpc call nn renew
             //3.just println long println long
-            res.end('2145830400'); 
-            logger.info('A dummy token renewed,'+req.url);
+            res.writeHead(200, {'Content-Type': 'text/plain'});
+            //if this value too small, date -current will be negative, then
+            //there will be thousands of renewal request
+            res.end('9223372036854775807\n'); 
+            //logger.info('A dummy token renewed,'+req.url);
         } else {
             proxy.web(req,res,{target:proxyDest});
         }
