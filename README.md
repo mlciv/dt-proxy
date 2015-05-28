@@ -81,6 +81,19 @@ public class SimpleAuthWebHdfsFileSystem extends WebHdfsFileSystem {
     2. Hack the binary protocol in above sevlets and issue dummy token.
     
     3. Forward others request (ListPath,/data/) to real namenode. 
+      Pay attention to this, when there are some bugs in hftp for the real namenode, but
+      you cann't easily upgrade your namenodes in every clusters.
+      In this time, upgrade dt-proxy is a easy way to make hftp workable.
+      Such as 
+      ```
+        https://issues.apache.org/jira/browse/HDFS-1109
+        https://issues.apache.org/jira/browse/HDFS-2235 
+        https://issues.apache.org/jira/browse/HDFS-2236
+        https://issues.apache.org/jira/secure/attachment/12490210/hdfs-2235-3.patch
+      ```
+      We can easily encode the "location" fielf in the redirect response. see
+      detail in code.
+
 
 ### Replace unresolved hostname to IP
 ****************
@@ -120,14 +133,16 @@ nohup node dummy-token-proxy.js 12351 http://your-real-namenode:50070 &
 hdfs dfs -ls hftp://10.31.72.101:12351/user/nlp &>ls_out_log
 When the hftpclient(HftpFileSystem) received the valid token, it will print the folllowing debug log in ls_out_log
 We using 41 41 41... as our identity.
-
+```
 15/01/21 16:40:41 DEBUG security.SecurityUtil: Acquired token Kind: HFTP delegation, Service: XX.XX.XXX.XXX:12351, Ident: 41 41 41 41 41 41 41 41 41 41
 15/01/21 16:40:41 DEBUG fs.FileSystem: Got dt for hftp://XXX.XX.XX.XX:12351;t.service=XXX.XX.XX.XX:12351
 15/01/21 16:40:41 DEBUG fs.FileSystem: Created new DT for XX.XX.XX.XX:12351
-
+```
 
 
 Also, you can check dt-proxy by using simple curl command as following:
+
+```
 1. curl http://127.0.0.1:12351/getDelegationToken
 2. curl http://127.0.0.1:12351/renewDelegationToken?asasas
 3. curl http://127.0.0.1:12351/cancelDelegationToken?assas
@@ -136,5 +151,5 @@ Also, you can check dt-proxy by using simple curl command as following:
 more comprehessive test: 
 1. hadoop dfs -get  hftp://10.31.72.101:12357/{your-real-file-in-real-hdfs} 
 2. hadoop jar hadoop-distcp-3.0.0-SNAPSHOT.jar -Dmapred.job.queue.name=rdipin -skipcrccheck -strategy dynamic -m 2 -update  hftp://10.31.72.101:12357/your-source-file hdfs://your-dest-file
-
+```
 see more in dummyp-token-proxy.js

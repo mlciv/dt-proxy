@@ -31,7 +31,7 @@ if (process.argv.length != 4) {
   process.exit(-1);
 }
 
-
+//load host_ip_dict
 var port = process.argv[2], proxyDest = process.argv[3]; 
 var host_ip_dict = {};
 lineReader.eachLine('SourceDataNodeHosts', function(line, last) {
@@ -57,6 +57,7 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
   var location = proxyRes.headers["location"];
   if(location!=null)
   {
+        // match hostname
   	var reg = /https?:\/\/.*?[:|\/]/;
   	var hostname_str = location.match(reg);
   	if(hostname_str==null) logger.error("find no pattern of hostname");
@@ -74,6 +75,8 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
   		var reg1 = hostname;
   		new_location = proxyRes.headers["location"].replace(hostname,host_ip_dict[hostname]); // replace the first one by default
   	}
+
+        // match filename, and encode it 
 	var filereg = /filename=.*?[&#]/;
         var filename_str = new_location.match(filereg);
         if(filename_str!=null){
