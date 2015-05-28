@@ -76,7 +76,7 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
   		new_location = proxyRes.headers["location"].replace(hostname,host_ip_dict[hostname]); // replace the first one by default
   	}
 
-        // match filename, and encode it 
+        // match filename, and encode it, because in hadoop V2 
 	var filereg = /filename=.*?[&#]/;
         var filename_str = new_location.match(filereg);
         if(filename_str!=null){
@@ -106,7 +106,7 @@ var server = require('http').createServer(function(req, res) {
         logger.info('Renew token for ' + req.socket.remoteAddress);
         res.writeHead(200, {'Content-Type': 'application/json'});
         // 12-31-2037
-        res.end('{"long":2145830400}');
+        res.end('{"long": 9223372036854775807}');
         } else {
             proxy.web(req, res, { target: proxyDest });
         }
